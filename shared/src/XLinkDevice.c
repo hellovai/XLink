@@ -27,11 +27,11 @@
 // Global fields. Begin.
 // ------------------------------------
 
-XLinkGlobalHandler_t* glHandler; //TODO need to either protect this with semaphor
+XLinkGlobalHandler_t *glHandler; //TODO need to either protect this with semaphor
                                  //or make profiling data per device
 
 xLinkDesc_t availableXLinks[MAX_LINKS];
-sem_t  pingSem; //to b used by myriad
+sem_t pingSem; //to b used by myriad
 DispatcherControlFunctions controlFunctionTbl;
 linkId_t nextUniqueLinkId = 0; //incremental number, doesn't get decremented.
 
@@ -39,14 +39,12 @@ linkId_t nextUniqueLinkId = 0; //incremental number, doesn't get decremented.
 // Global fields. End.
 // ------------------------------------
 
-
-
 // ------------------------------------
 // Helpers declaration. Begin.
 // ------------------------------------
 
 static linkId_t getNextAvailableLinkUniqueId();
-static xLinkDesc_t* getNextAvailableLink();
+static xLinkDesc_t *getNextAvailableLink();
 
 #ifdef __PC__
 
@@ -58,13 +56,11 @@ static XLinkError_t parsePlatformError(xLinkPlatformErrorCode_t rc);
 // Helpers declaration. End.
 // ------------------------------------
 
-
-
 // ------------------------------------
 // API implementation. Begin.
 // ------------------------------------
 
-XLinkError_t XLinkInitialize(XLinkGlobalHandler_t* globalHandler)
+XLinkError_t XLinkInitialize(XLinkGlobalHandler_t *globalHandler)
 {
 #ifndef __PC__
     mvLogLevelSet(MVLOG_FATAL);
@@ -74,7 +70,8 @@ XLinkError_t XLinkInitialize(XLinkGlobalHandler_t* globalHandler)
     XLINK_RET_IF(globalHandler == NULL);
     ASSERT_XLINK(XLINK_MAX_STREAMS <= MAX_POOLS_ALLOC);
     glHandler = globalHandler;
-    if (sem_init(&pingSem,0,0)) {
+    if (sem_init(&pingSem, 0, 0))
+    {
         mvLog(MVLOG_ERROR, "Can't create semaphore\n");
     }
     int i;
@@ -86,27 +83,28 @@ XLinkError_t XLinkInitialize(XLinkGlobalHandler_t* globalHandler)
     int protocol = globalHandler->protocol;
     //Using deprecated fields. End.
 
-    memset((void*)globalHandler, 0, sizeof(XLinkGlobalHandler_t));
+    memset((void *)globalHandler, 0, sizeof(XLinkGlobalHandler_t));
 
     //Using deprecated fields. Begin.
     globalHandler->loglevel = loglevel;
     globalHandler->protocol = protocol;
     //Using deprecated fields. End.
 
-    controlFunctionTbl.eventReceive      = &dispatcherEventReceive;
-    controlFunctionTbl.eventSend         = &dispatcherEventSend;
-    controlFunctionTbl.localGetResponse  = &dispatcherLocalEventGetResponse;
+    controlFunctionTbl.eventReceive = &dispatcherEventReceive;
+    controlFunctionTbl.eventSend = &dispatcherEventSend;
+    controlFunctionTbl.localGetResponse = &dispatcherLocalEventGetResponse;
     controlFunctionTbl.remoteGetResponse = &dispatcherRemoteEventGetResponse;
-    controlFunctionTbl.closeLink         = &dispatcherCloseLink;
-    controlFunctionTbl.closeDeviceFd     = &dispatcherCloseDeviceFd;
+    controlFunctionTbl.closeLink = &dispatcherCloseLink;
+    controlFunctionTbl.closeDeviceFd = &dispatcherCloseDeviceFd;
 
     XLINK_RET_IF(DispatcherInitialize(&controlFunctionTbl));
 
     //initialize availableStreams
     memset(availableXLinks, 0, sizeof(availableXLinks));
 
-    xLinkDesc_t* link;
-    for (i = 0; i < MAX_LINKS; i++) {
+    xLinkDesc_t *link;
+    for (i = 0; i < MAX_LINKS; i++)
+    {
         link = &availableXLinks[i];
 
         link->id = INVALID_LINK_ID;
@@ -138,7 +136,8 @@ XLinkError_t XLinkInitialize(XLinkGlobalHandler_t* globalHandler)
 
 #ifdef __PC__
 
-int XLinkIsDescriptionValid(const deviceDesc_t *in_deviceDesc, const XLinkDeviceState_t state) {
+int XLinkIsDescriptionValid(const deviceDesc_t *in_deviceDesc, const XLinkDeviceState_t state)
+{
     return XLinkPlatformIsDescriptionValid(in_deviceDesc, state);
 }
 
@@ -157,7 +156,8 @@ XLinkError_t XLinkFindAllSuitableDevices(XLinkDeviceState_t state,
                                          const deviceDesc_t in_deviceRequirements,
                                          deviceDesc_t *out_foundDevicesPtr,
                                          const unsigned int devicesArraySize,
-                                         unsigned int* out_foundDevicesCount) {
+                                         unsigned int *out_foundDevicesCount)
+{
     XLINK_RET_IF(out_foundDevicesPtr == NULL);
     XLINK_RET_IF(devicesArraySize <= 0);
     XLINK_RET_IF(out_foundDevicesCount == NULL);
@@ -171,23 +171,25 @@ XLinkError_t XLinkFindAllSuitableDevices(XLinkDeviceState_t state,
 }
 
 //Called only from app - per device
-XLinkError_t XLinkConnect(XLinkHandler_t* handler)
+XLinkError_t XLinkConnect(XLinkHandler_t *handler)
 {
     XLINK_RET_IF(handler == NULL);
-    if (strnlen(handler->devicePath, MAX_PATH_LENGTH) < 2) {
+    if (strnlen(handler->devicePath, MAX_PATH_LENGTH) < 2)
+    {
         mvLog(MVLOG_ERROR, "Device path is incorrect");
         return X_LINK_ERROR;
     }
 
-    xLinkDesc_t* link = getNextAvailableLink();
+    xLinkDesc_t *link = getNextAvailableLink();
     XLINK_RET_IF(link == NULL);
-    mvLog(MVLOG_DEBUG,"%s() device name %s glHandler %p protocol %d\n", __func__, handler->devicePath, glHandler, handler->protocol);
+    mvLog(MVLOG_DEBUG, "%s() device name %s glHandler %p protocol %d\n", __func__, handler->devicePath, glHandler, handler->protocol);
 
     link->deviceHandle.protocol = handler->protocol;
     int connectStatus = XLinkPlatformConnect(handler->devicePath2, handler->devicePath,
                                              link->deviceHandle.protocol, &link->deviceHandle.xLinkFD);
 
-    if (connectStatus < 0) {
+    if (connectStatus < 0)
+    {
         /**
          * Connection may be unsuccessful at some amount of first tries.
          * In this case, asserting the status provides enormous amount of logs in tests.
@@ -204,38 +206,41 @@ XLinkError_t XLinkConnect(XLinkHandler_t* handler)
     event.deviceHandle = link->deviceHandle;
     DispatcherAddEvent(EVENT_LOCAL, &event);
 
-    if (DispatcherWaitEventComplete(&link->deviceHandle)) {
+    if (DispatcherWaitEventComplete(&link->deviceHandle))
+    {
         DispatcherClean(&link->deviceHandle);
         return X_LINK_TIMEOUT;
     }
 
     link->id = getNextAvailableLinkUniqueId();
     link->peerState = XLINK_UP;
-    #if (!defined(_WIN32) && !defined(_WIN64) )
-        link->usbConnSpeed = get_usb_speed();
-        mv_strcpy(link->mxSerialId, XLINK_MAX_MXID, get_mx_serial());
-    #else
-        link->usbConnSpeed = X_LINK_USB_SPEED_UNKNOWN;
-        mv_strcpy(link->mxSerialId, XLINK_MAX_MXID, "UNKNOWN");
-    #endif
+#if (!defined(_WIN32) && !defined(_WIN64))
+    link->usbConnSpeed = get_usb_speed();
+    mv_strcpy(link->mxSerialId, XLINK_MAX_MXID, get_mx_serial());
+#else
+    link->usbConnSpeed = X_LINK_USB_SPEED_UNKNOWN;
+    mv_strcpy(link->mxSerialId, XLINK_MAX_MXID, "UNKNOWN");
+#endif
 
     link->hostClosedFD = 0;
     handler->linkId = link->id;
     return X_LINK_SUCCESS;
 }
 
-XLinkError_t XLinkBootMemory(deviceDesc_t* deviceDesc, uint8_t* buffer, long size)
+XLinkError_t XLinkBootMemory(const deviceDesc_t *deviceDesc, uint8_t *buffer, long size)
 {
-    if (XLinkPlatformBootMemoryRemote(deviceDesc, buffer, size) == 0) {
+    if (XLinkPlatformBootMemoryRemote((deviceDesc_t *)deviceDesc, buffer, size) == 0)
+    {
         return X_LINK_SUCCESS;
     }
 
     return X_LINK_COMMUNICATION_FAIL;
 }
 
-XLinkError_t XLinkBoot(deviceDesc_t* deviceDesc, const char* binaryPath)
+XLinkError_t XLinkBoot(const deviceDesc_t *deviceDesc, const char *binaryPath)
 {
-    if (XLinkPlatformBootRemote(deviceDesc, binaryPath) == 0) {
+    if (XLinkPlatformBootRemote((deviceDesc_t *)deviceDesc, binaryPath) == 0)
+    {
         return X_LINK_SUCCESS;
     }
 
@@ -244,10 +249,11 @@ XLinkError_t XLinkBoot(deviceDesc_t* deviceDesc, const char* binaryPath)
 
 XLinkError_t XLinkResetRemote(linkId_t id)
 {
-    xLinkDesc_t* link = getLinkById(id);
+    xLinkDesc_t *link = getLinkById(id);
     XLINK_RET_IF(link == NULL);
 
-    if (getXLinkState(link) != XLINK_UP) {
+    if (getXLinkState(link) != XLINK_UP)
+    {
         mvLog(MVLOG_WARN, "Link is down, close connection to device without reset");
         XLinkPlatformCloseRemote(&link->deviceHandle);
         return X_LINK_COMMUNICATION_NOT_OPEN;
@@ -260,10 +266,11 @@ XLinkError_t XLinkResetRemote(linkId_t id)
     mvLog(MVLOG_DEBUG, "sending reset remote event\n");
     DispatcherAddEvent(EVENT_LOCAL, &event);
     XLINK_RET_ERR_IF(DispatcherWaitEventComplete(&link->deviceHandle),
-        X_LINK_TIMEOUT);
+                     X_LINK_TIMEOUT);
 
-    if(sem_wait(&link->dispatcherClosedSem)) {
-        mvLog(MVLOG_ERROR,"can't wait dispatcherClosedSem\n");
+    if (sem_wait(&link->dispatcherClosedSem))
+    {
+        mvLog(MVLOG_ERROR, "can't wait dispatcherClosedSem\n");
         return X_LINK_ERROR;
     }
 
@@ -276,23 +283,29 @@ XLinkError_t XLinkResetAll()
     mvLog(MVLOG_INFO, "Devices will not be restarted for this configuration (NO_BOOT)");
 #else
     int i;
-    for (i = 0; i < MAX_LINKS; i++) {
-        if (availableXLinks[i].id != INVALID_LINK_ID) {
-            xLinkDesc_t* link = &availableXLinks[i];
+    for (i = 0; i < MAX_LINKS; i++)
+    {
+        if (availableXLinks[i].id != INVALID_LINK_ID)
+        {
+            xLinkDesc_t *link = &availableXLinks[i];
             int stream;
-            for (stream = 0; stream < XLINK_MAX_STREAMS; stream++) {
-                if (link->availableStreams[stream].id != INVALID_STREAM_ID) {
+            for (stream = 0; stream < XLINK_MAX_STREAMS; stream++)
+            {
+                if (link->availableStreams[stream].id != INVALID_STREAM_ID)
+                {
                     streamId_t streamId = link->availableStreams[stream].id;
-                    mvLog(MVLOG_DEBUG,"%s() Closing stream (stream = %d) %d on link %d\n",
-                          __func__, stream, (int) streamId, (int) link->id);
+                    mvLog(MVLOG_DEBUG, "%s() Closing stream (stream = %d) %d on link %d\n",
+                          __func__, stream, (int)streamId, (int)link->id);
                     COMBINE_IDS(streamId, link->id);
-                    if (XLinkCloseStream(streamId) != X_LINK_SUCCESS) {
-                        mvLog(MVLOG_WARN,"Failed to close stream");
+                    if (XLinkCloseStream(streamId) != X_LINK_SUCCESS)
+                    {
+                        mvLog(MVLOG_WARN, "Failed to close stream");
                     }
                 }
             }
-            if (XLinkResetRemote(link->id) != X_LINK_SUCCESS) {
-                mvLog(MVLOG_WARN,"Failed to reset");
+            if (XLinkResetRemote(link->id) != X_LINK_SUCCESS)
+            {
+                mvLog(MVLOG_WARN, "Failed to reset");
             }
         }
     }
@@ -328,41 +341,42 @@ XLinkError_t XLinkProfPrint()
     {
         printf("Average write speed: %f MB/Sec\n",
                glHandler->profilingData.totalWriteBytes /
-               glHandler->profilingData.totalWriteTime /
-               1024.0 /
-               1024.0 );
+                   glHandler->profilingData.totalWriteTime /
+                   1024.0 /
+                   1024.0);
     }
     if (glHandler->profilingData.totalReadTime)
     {
         printf("Average read speed: %f MB/Sec\n",
                glHandler->profilingData.totalReadBytes /
-               glHandler->profilingData.totalReadTime /
-               1024.0 /
-               1024.0);
+                   glHandler->profilingData.totalReadTime /
+                   1024.0 /
+                   1024.0);
     }
     if (glHandler->profilingData.totalBootCount)
     {
         printf("Average boot speed: %f sec\n",
                glHandler->profilingData.totalBootTime /
-               glHandler->profilingData.totalBootCount);
+                   glHandler->profilingData.totalBootCount);
     }
     return X_LINK_SUCCESS;
 }
 
-UsbSpeed_t XLinkGetUSBSpeed(linkId_t id){
-    xLinkDesc_t* link = getLinkById(id);
+UsbSpeed_t XLinkGetUSBSpeed(linkId_t id)
+{
+    xLinkDesc_t *link = getLinkById(id);
     return link->usbConnSpeed;
 }
 
-const char* XLinkGetMxSerial(linkId_t id){
-    xLinkDesc_t* link = getLinkById(id);
+const char *XLinkGetMxSerial(linkId_t id)
+{
+    xLinkDesc_t *link = getLinkById(id);
     return link->mxSerialId;
 }
 
 // ------------------------------------
 // API implementation. End.
 // ------------------------------------
-
 
 // ------------------------------------
 // Helpers implementation. Begin.
@@ -394,22 +408,27 @@ static linkId_t getNextAvailableLinkUniqueId()
     return INVALID_LINK_ID;
 }
 
-static xLinkDesc_t* getNextAvailableLink() {
+static xLinkDesc_t *getNextAvailableLink()
+{
     int i;
-    for (i = 0; i < MAX_LINKS; i++) {
-        if (availableXLinks[i].id == INVALID_LINK_ID) {
+    for (i = 0; i < MAX_LINKS; i++)
+    {
+        if (availableXLinks[i].id == INVALID_LINK_ID)
+        {
             break;
         }
     }
 
-    if(i >= MAX_LINKS) {
-        mvLog(MVLOG_ERROR,"%s():- no next available link!\n", __func__);
+    if (i >= MAX_LINKS)
+    {
+        mvLog(MVLOG_ERROR, "%s():- no next available link!\n", __func__);
         return NULL;
     }
 
-    xLinkDesc_t* link = &availableXLinks[i];
+    xLinkDesc_t *link = &availableXLinks[i];
 
-    if (sem_init(&link->dispatcherClosedSem, 0 ,0)) {
+    if (sem_init(&link->dispatcherClosedSem, 0, 0))
+    {
         mvLog(MVLOG_ERROR, "Cannot initialize semaphore\n");
         return NULL;
     }
@@ -419,16 +438,18 @@ static xLinkDesc_t* getNextAvailableLink() {
 
 #ifdef __PC__
 
-static XLinkError_t parsePlatformError(xLinkPlatformErrorCode_t rc) {
-    switch (rc) {
-        case X_LINK_PLATFORM_SUCCESS:
-            return X_LINK_SUCCESS;
-        case X_LINK_PLATFORM_DEVICE_NOT_FOUND:
-            return X_LINK_DEVICE_NOT_FOUND;
-        case X_LINK_PLATFORM_TIMEOUT:
-            return X_LINK_TIMEOUT;
-        default:
-            return X_LINK_ERROR;
+static XLinkError_t parsePlatformError(xLinkPlatformErrorCode_t rc)
+{
+    switch (rc)
+    {
+    case X_LINK_PLATFORM_SUCCESS:
+        return X_LINK_SUCCESS;
+    case X_LINK_PLATFORM_DEVICE_NOT_FOUND:
+        return X_LINK_DEVICE_NOT_FOUND;
+    case X_LINK_PLATFORM_TIMEOUT:
+        return X_LINK_TIMEOUT;
+    default:
+        return X_LINK_ERROR;
     }
 }
 
