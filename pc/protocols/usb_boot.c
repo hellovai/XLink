@@ -15,7 +15,7 @@
 #include "win_time.h"
 #include "win_pthread.h"
 #else
-#include <libusb.h>
+#include "libusb.h"
 #include <unistd.h>
 #include <getopt.h>
 #include <pthread.h>

@@ -23,7 +23,7 @@
 #include "win_pthread.h"
 #else
 #include <unistd.h>
-#include <libusb.h>
+#include "libusb.h"
 #endif  /*defined(_WIN32) || defined(_WIN64)*/
 
 #ifdef USE_LINK_JTAG

@@ -21,7 +21,7 @@
 
 #else
 #include <unistd.h>
-#include <libusb.h>
+#include "libusb.h"
 #endif  /*defined(_WIN32) || defined(_WIN64)*/
 
 #ifndef USE_USB_VSC
